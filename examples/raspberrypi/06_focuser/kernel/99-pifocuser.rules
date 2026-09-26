@@ -1,0 +1,4 @@
+# /etc/udev/rules.d/99-pifocuser.rules
+# sysfs 属性默认只有 root 可写；驱动绑定（bind 事件，此时 dev_groups 属性已创建）后交给 pi 组
+ACTION=="bind", SUBSYSTEM=="platform", DRIVER=="pi-focuser", \
+  RUN+="/bin/sh -c 'cd /sys%p && chgrp pi position target halt max_position max_speed accel hold && chmod g+w position target halt max_position max_speed accel hold'"

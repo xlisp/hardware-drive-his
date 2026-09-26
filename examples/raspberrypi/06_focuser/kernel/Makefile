@@ -15,6 +15,7 @@ install: all
 	sudo $(MAKE) -C $(KDIR) M=$(CURDIR) modules_install
 	sudo depmod -a
 	sudo cp pifocuser.dtbo $(OVERLAY_DIR)/
+	sudo cp 99-pifocuser.rules /etc/udev/rules.d/
 	@echo "now add 'dtoverlay=pifocuser' (and 'dtoverlay=w1-gpio,gpiopin=4') to /boot/firmware/config.txt and reboot"
 
 clean:

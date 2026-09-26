@@ -1,0 +1,21 @@
+# /etc/systemd/system/pifocuser.service
+#   sudo cp focuserd.py focuserctl.py /usr/local/bin/ && sudo cp pifocuser.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now pifocuser
+#   journalctl -u pifocuser -f
+[Unit]
+Description=Raspberry Pi focuser daemon (Moonlite protocol)
+# 等内核驱动 probe 完成（sysfs 出现）；模块由设备树 compatible 自动加载
+After=systemd-modules-load.service
+
+[Service]
+User=pi
+Group=pi
+ExecStartPre=/bin/sh -c 'for i in $(seq 20); do ls /sys/bus/platform/drivers/pi-focuser/*/position >/dev/null 2>&1 && exit 0; sleep 0.5; done; exit 1'
+ExecStart=/usr/bin/python3 /usr/local/bin/focuserd.py --pty /tmp/pifocuser --port 4044 --state /var/lib/pifocuser/state.json --backlash 0
+StateDirectory=pifocuser
+Restart=on-failure
+# 停止时 focuserd 会先减速停车再保存位置
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target

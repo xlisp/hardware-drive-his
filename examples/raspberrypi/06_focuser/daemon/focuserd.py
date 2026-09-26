@@ -25,6 +25,7 @@ import json
 import logging
 import os
 import selectors
+import signal
 import socket
 import time
 import tty
@@ -488,8 +489,11 @@ def main():
         temp = TempSensor(a.temp_file)
     foc = Focuser(hw, temp, a.state, a.backlash)
     srv = Server(foc, a.pty or None, None if a.port < 0 else a.port)
+    # systemd 停止服务发 SIGTERM：同样走下面的"减速停车 + 保存位置"流程
+    stopping = []
+    signal.signal(signal.SIGTERM, lambda *_: stopping.append(1))
     try:
-        srv.serve()
+        srv.serve(stop=lambda: bool(stopping))
     except KeyboardInterrupt:
         pass
     finally:
