@@ -38,7 +38,8 @@ examples/
 │   ├── 02_i2c_dev_bmp280/         可移植驱动接到 /dev/i2c-1（用户态驱动）
 │   ├── 03_kernel_misc_chardev/    最小内核模块：/dev/hello
 │   ├── 04_platform_driver_dt/     platform 驱动 + 设备树 overlay + sysfs + 内核定时器
-│   └── 05_i2c_hwmon_driver/       BMP280 内核 I2C 驱动，温度导出到 hwmon
+│   ├── 05_i2c_hwmon_driver/       BMP280 内核 I2C 驱动，温度导出到 hwmon
+│   └── 06_focuser/                ★ 完整项目：电动天文调焦器（硬件设计 + 内核驱动 + Moonlite 守护进程）
 ├── usb/libusb_probe/              libusb 用户态 USB 驱动骨架：枚举、描述符、厂商控制请求
 └── reverse_engineering/
     ├── shim_interpose/            同名替换库 + RTLD_DEEPBIND + 调用者识别 + 汇编跳板（可运行的 Linux 演示）
@@ -58,6 +59,7 @@ examples/
 | `stm32/02_hal_bmp280` | 任意 STM32 + CubeMX 工程 | 加进工程 | 代码审阅 |
 | `raspberrypi/01,02` | Pi 0～5（`gpio_mmap` 仅 Pi 0～4） | `make` | 代码审阅 |
 | `raspberrypi/03,04,05` | Pi OS，内核 ≥ 6.3 | `make && sudo insmod *.ko` | 代码审阅 |
+| `raspberrypi/06_focuser` | Pi + TMC2209 + NEMA17 | 见[该目录 README](examples/raspberrypi/06_focuser/README.md) | ✅ 守护进程 11 个测试 + 端到端（模拟电机）；内核驱动代码审阅 |
 | `usb/libusb_probe` | Linux / macOS | `make` | 代码审阅 |
 | `reverse_engineering/shim_interpose` | Linux x86-64 / arm64 / armhf | `make demo` | ✅ 跳板在三种架构上汇编通过 |
 | `reverse_engineering/tools/usbmon_parse.py` | 任意 | 见文件头 | ✅ 用样例抓包测试 |
@@ -354,6 +356,8 @@ make && sudo insmod demo_gpio_led.ko    # compatible 匹配 → probe()
 echo 200 | sudo tee /sys/devices/platform/demo-led/blink_ms
 ```
 
+完整的综合项目见 [06_focuser](examples/raspberrypi/06_focuser/README.md)：同样的 platform + 设备树结构，加上 hrtimer 实时发步进脉冲、梯形加减速、自旋锁，再配一个说 Moonlite 协议的用户态守护进程，让 KStars/Ekos 直接把它当成调焦器使用。
+
 这里用到的都是现代内核驱动的惯用法：`devm_*` 资源自动释放、`dev_err_probe`、`sysfs_emit`、`dev_groups`、`MODULE_DEVICE_TABLE`（让 udev 按 compatible 自动加载模块）。
 
 **(c) I2C 客户端驱动 + hwmon** [bmp280_hwmon.c](examples/raspberrypi/05_i2c_hwmon_driver/bmp280_hwmon.c)：同一颗 BMP280，这次温度出现在 `/sys/class/hwmon/hwmonN/temp1_input`，`sensors` 命令直接能读，**不需要任何人知道 BMP280 的寄存器**。这就是"驱动子系统"的价值：把设备特有的协议翻译成**所有程序都懂的标准接口**。
@@ -622,6 +626,7 @@ zwoair_imager ─► libEFWFilter.so（shim）─┬─ ZWO EFW ─► 原厂库
 阶段 4  STM32 HAL/LL + FreeRTOS 或 Zephyr，写可移植驱动            → portable_driver、stm32/02
 阶段 5  树莓派用户态：libgpiod、i2c-dev、spidev、libusb            → raspberrypi/01-02、usb
 阶段 6  Linux 内核：模块、字符设备、platform + DT、I2C/SPI 子系统  → raspberrypi/03-05
+阶段 6½ 综合项目：从选型接线到内核 + 用户态 + 行业协议           → raspberrypi/06_focuser（电动调焦器）
 阶段 7  子系统：IIO、hwmon、input、V4L2、regmap；向主线提交补丁
 阶段 8  逆向：抓包、插桩、反汇编、兼容层                          → reverse_engineering、hezi-hack
 ```

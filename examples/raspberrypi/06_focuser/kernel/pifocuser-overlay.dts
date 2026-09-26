@@ -23,7 +23,7 @@
 				step-gpios   = <&gpio 17 0>;   /* 排针 11 脚 */
 				dir-gpios    = <&gpio 27 0>;   /* 排针 13 脚；方向反了改成 1 */
 				enable-gpios = <&gpio 22 1>;   /* 排针 15 脚；TMC2209 EN 低电平使能 */
-				max-position = <50000>;        /* 行程（微步），按第 1.4 节实测后修改 */
+				max-position = <15000>;        /* 行程（微步）：50 mm ÷ 3.33 µm，见 README 1.4 节，按实测修改 */
 				max-speed    = <800>;          /* 微步/秒 */
 				start-speed  = <100>;          /* 起停速度：低于电机的"起跳频率"，不需加速就能直接起停 */
 				acceleration = <2000>;         /* 微步/秒² */
