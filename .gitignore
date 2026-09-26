@@ -1,0 +1,17 @@
+# build outputs
+*.o
+*.ko
+*.mod
+*.mod.c
+*.order
+*.symvers
+.*.cmd
+*.dtbo
+*.elf
+*.bin
+*.map
+*.so
+__pycache__/
+examples/portable_driver/bmp280/test_host
+examples/reverse_engineering/shim_interpose/app
+examples/reverse_engineering/shim_interpose/vendor/
