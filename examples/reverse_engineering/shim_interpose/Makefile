@@ -8,7 +8,8 @@ all: app libvendor_orig.so libvendor.so
 # 1) "厂商"交付物：libvendor.so + 链接了它的 app
 vendor/libvendor.so: vendor.c
 	mkdir -p vendor
-	$(CC) $(CFLAGS) -fPIC -shared -Wl,-soname,libvendor.so -o $@ $<
+	# -fno-inline：保证库内调用走 PLT（真实厂商库一般也是这样），便于演示符号插入
+	$(CC) $(CFLAGS) -fno-inline -fPIC -shared -Wl,-soname,libvendor.so -o $@ $<
 app: app.c vendor/libvendor.so
 	$(CC) $(CFLAGS) -o $@ app.c -Lvendor -lvendor
 
