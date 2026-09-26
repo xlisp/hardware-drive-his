@@ -1,0 +1,37 @@
+/*
+ * demo-led-overlay.dts - 设备树 overlay：在根节点下加一个 demo-led 设备，LED 接 GPIO17
+ *
+ * 编译：dtc -@ -I dts -O dtb -o demo-led.dtbo demo-led-overlay.dts
+ * 安装：sudo cp demo-led.dtbo /boot/firmware/overlays/     （Bookworm 之前是 /boot/overlays/）
+ *       在 /boot/firmware/config.txt 末尾加：dtoverlay=demo-led
+ *       也可以不重启、运行时加载：sudo dtoverlay demo-led.dtbo   （dtoverlay -l 查看）
+ * 换引脚：dtoverlay=demo-led,gpio=22    （下面 __overrides__ 定义的参数）
+ *
+ * 验证：
+ *   ls /proc/device-tree/demo-led/                   设备树节点已存在
+ *   sudo insmod demo_gpio_led.ko                     驱动按 compatible 匹配，probe 被调用
+ *   echo 200 | sudo tee /sys/devices/platform/demo-led/blink_ms
+ *   gpioinfo | grep 17                               显示 "led" 被内核占用
+ */
+/dts-v1/;
+/plugin/;
+
+/ {
+	/* Pi 0-4 是 brcm,bcm2835 家族；Pi 5 写 "brcm,bcm2712"。&gpio 在 Pi 5 上指向 RP1 的 GPIO */
+	compatible = "brcm,bcm2835";
+
+	fragment@0 {
+		target-path = "/";
+		__overlay__ {
+			demo_led: demo-led {
+				compatible = "demo,gpio-led";
+				led-gpios = <&gpio 17 0>;   /* 0 = GPIO_ACTIVE_HIGH；低电平亮的 LED 写 1 */
+				status = "okay";
+			};
+		};
+	};
+
+	__overrides__ {
+		gpio = <&demo_led>, "led-gpios:4";  /* 改写 led-gpios 第 2 个 cell（字节偏移 4） */
+	};
+};

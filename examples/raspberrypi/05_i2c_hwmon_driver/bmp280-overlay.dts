@@ -1,0 +1,29 @@
+/*
+ * bmp280-overlay.dts - 在 i2c1（排针 3/5 脚）上声明一个地址 0x76 的 BMP280
+ *
+ * dtc -@ -I dts -O dtb -o demo-bmp280.dtbo bmp280-overlay.dts
+ * sudo cp demo-bmp280.dtbo /boot/firmware/overlays/ ; config.txt 加 dtoverlay=demo-bmp280
+ *
+ * 启动后内核会在 i2c-1 上创建 1-0076 设备；模块加载时按 compatible 匹配并调用 probe()。
+ * 对比：官方 overlay "i2c-sensor,bmp280" 绑定的是主线 IIO 驱动（compatible = "bosch,bmp280"）。
+ */
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "brcm,bcm2835";
+
+	fragment@0 {
+		target = <&i2c1>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			bmp280@76 {
+				compatible = "demo,bmp280";
+				reg = <0x76>;
+			};
+		};
+	};
+};
