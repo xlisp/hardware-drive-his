@@ -1,0 +1,45 @@
+/*
+ * pifocuser-overlay.dts - 告诉内核"调焦电机接在哪几根 GPIO 上"
+ *
+ * 编译安装：
+ *   dtc -@ -I dts -O dtb -o pifocuser.dtbo pifocuser-overlay.dts
+ *   sudo cp pifocuser.dtbo /boot/firmware/overlays/
+ *   /boot/firmware/config.txt 加一行：dtoverlay=pifocuser
+ *   换引脚/参数：dtoverlay=pifocuser,step=5,dir=6,en=13,max=30000,speed=1200
+ * 温度探头（DS18B20，1-Wire）用系统自带 overlay：dtoverlay=w1-gpio,gpiopin=4
+ */
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "brcm,bcm2835";           /* Pi 5 为 "brcm,bcm2712"，其余不变 */
+
+	fragment@0 {
+		target-path = "/";
+		__overlay__ {
+			pifocuser: pi-focuser {
+				compatible = "demo,pi-focuser";
+				/* <&gpio 引脚号 flags>，flags: 0 = 高有效，1 = 低有效 */
+				step-gpios   = <&gpio 17 0>;   /* 排针 11 脚 */
+				dir-gpios    = <&gpio 27 0>;   /* 排针 13 脚；方向反了改成 1 */
+				enable-gpios = <&gpio 22 1>;   /* 排针 15 脚；TMC2209 EN 低电平使能 */
+				max-position = <50000>;        /* 行程（微步），按第 1.4 节实测后修改 */
+				max-speed    = <800>;          /* 微步/秒 */
+				start-speed  = <100>;          /* 起停速度：低于电机的"起跳频率"，不需加速就能直接起停 */
+				acceleration = <2000>;         /* 微步/秒² */
+				hold-current;                  /* 停止后保持通电：相机重时防止调焦筒下滑 */
+				status = "okay";
+			};
+		};
+	};
+
+	__overrides__ {
+		step  = <&pifocuser>, "step-gpios:4";
+		dir   = <&pifocuser>, "dir-gpios:4";
+		en    = <&pifocuser>, "enable-gpios:4";
+		max   = <&pifocuser>, "max-position:0";
+		speed = <&pifocuser>, "max-speed:0";
+		accel = <&pifocuser>, "acceleration:0";
+		hold  = <&pifocuser>, "hold-current?";   /* "?" = 布尔属性：hold=off 删除 hold-current */
+	};
+};
