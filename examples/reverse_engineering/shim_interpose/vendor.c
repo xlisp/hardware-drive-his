@@ -14,12 +14,14 @@ const char *dev_name(int i) { return i >= 0 && i < 2 ? names[i] : NULL; }
 
 int dev_capture(int i, unsigned char *buf, int len)
 {
-    /* 库内部又调用了自己导出的 dev_count()。如果 shim 覆盖了 dev_count 且原库不是用
-     * RTLD_DEEPBIND 加载的，这里会调到 shim 的版本 —— 原库就会接受一个它根本不认识的下标。 */
+    /* 库内部又调用了自己导出的 dev_count()/dev_name()。ELF 默认允许符号插入：如果原库不是用
+     * RTLD_DEEPBIND 加载的，这两个调用会先找到 shim 里的同名函数 —— 而 shim 的下标编号和
+     * 原库不同，于是原库拿到的是别的设备的信息。 */
     if (i < 0 || i >= dev_count()) {
         fprintf(stderr, "[vendor] dev_capture: bad index %d\n", i);
         return -1;
     }
+    fprintf(stderr, "[vendor] capturing on %s\n", dev_name(i));
     memset(buf, 0x10 + i, len);
     return len;
 }

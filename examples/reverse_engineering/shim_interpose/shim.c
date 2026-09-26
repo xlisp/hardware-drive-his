@@ -4,7 +4,7 @@
  * 和 hezi-hack/shim/asi_qhy_shim.cpp 同一套技术，缩小到 100 行：
  *   1. 导出符号与原库完全一致（nm -D --defined-only 两边 diff 为空）
  *   2. 原库用 dlopen(RTLD_LOCAL | RTLD_DEEPBIND) 加载：它内部调用自己的函数时不会绕回 shim
- *   3. 在原厂设备列表后面追加一台"外来设备"，自己实现它的全部行为
+ *   3. 在原厂设备列表前面插入一台"外来设备"（下标 0），原厂设备整体后移一位
  *   4. dev_get_vid 只对"应用本体"撒谎（dladdr1 判断调用者），库之间的调用看到的仍是真实 VID
  *   5. 原型未知的 vendor_secret 用汇编跳板原样转发（trampolines.S），不用知道参数
  */
@@ -42,7 +42,8 @@ __attribute__((constructor)) static void shim_init(void)
 }
 
 static int n_orig(void) { return o_count ? o_count() : 0; }
-static int is_foreign(int i) { return i == n_orig(); }
+static int is_foreign(int i) { return i == 0; }
+static int orig_idx(int i) { return i - 1; }     /* shim 下标 → 原库下标 */
 
 /* 返回地址所在的模块是不是主程序？比较 link_map：主程序的 link_map 就是 dlopen(NULL) 的句柄 */
 static int called_from_main_exe(void *ret_addr)
@@ -58,7 +59,7 @@ int dev_count(void) { return n_orig() + 1; }
 
 int dev_get_vid(int i)
 {
-    if (!is_foreign(i)) return o_vid(i);
+    if (!is_foreign(i)) return o_vid(orig_idx(i));
     if (called_from_main_exe(__builtin_return_address(0))) {
         fprintf(stderr, "[shim] reporting foreign device #%d as VID %04x to the app\n", i, FAKE_VID);
         return FAKE_VID;
@@ -66,11 +67,11 @@ int dev_get_vid(int i)
     return REAL_VID;
 }
 
-const char *dev_name(int i) { return is_foreign(i) ? "OtherBrand X1" : o_name(i); }
+const char *dev_name(int i) { return is_foreign(i) ? "OtherBrand X1" : o_name(orig_idx(i)); }
 
 int dev_capture(int i, unsigned char *buf, int len)
 {
-    if (!is_foreign(i)) return o_capture(i, buf, len);
+    if (!is_foreign(i)) return o_capture(orig_idx(i), buf, len);
     memset(buf, 0xEE, len);                /* 这里才是真正的"外来设备驱动"：调用另一家的 SDK */
     return len;
 }
